@@ -1,0 +1,135 @@
+const express = require("express");
+const sqlite3 = require("sqlite3").verbose();
+const cors = require("cors");
+const app = express();
+const port = 3000;
+
+app.use(express.json());
+app.use(cors());
+
+const db = new sqlite3.Database("./groups.db", (err) => {
+  if (err) console.error("Database error:", err);
+  console.log("Connected to SQLite database");
+});
+
+db.run(`
+  CREATE TABLE IF NOT EXISTS groups (
+    code TEXT PRIMARY KEY,
+    name TEXT,
+    subName TEXT,
+    startMonth TEXT,
+    startYear TEXT,
+    duration TEXT,
+    members TEXT,
+    calendar TEXT
+  )
+`);
+
+const generateGroupCode = () => {
+  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let code = "";
+  for (let i = 0; i < 8; i++) {
+    code += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return code;
+};
+
+app.post("/create-group", (req, res) => {
+  const { name, subName, startMonth, startYear, duration } = req.body;
+  if (!name || !subName) return res.status(400).json({ error: "Name und Untername erforderlich" });
+
+  const code = generateGroupCode();
+  const members = JSON.stringify([name]);
+  const calendar = JSON.stringify({});
+
+  db.run(
+    "INSERT INTO groups (code, name, subName, startMonth, startYear, duration, members, calendar) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    [code, name, subName, startMonth, startYear, duration, members, calendar],
+    (err) => {
+      if (err) {
+        console.error("Insert error:", err.message);
+        return res.status(500).json({ error: "Fehler beim Erstellen der Gruppe", details: err.message });
+      }
+      res.json({ code, message: "Gruppe erstellt" });
+    }
+  );
+});
+
+app.post("/join-group", (req, res) => {
+  const { name, code } = req.body;
+  if (!name || !code || code.length !== 8) return res.status(400).json({ error: "Name und gültiger Code erforderlich" });
+
+  db.get("SELECT * FROM groups WHERE code = ?", [code], (err, row) => {
+    if (err) return res.status(500).json({ error: "Datenbankfehler" });
+    if (!row) return res.status(404).json({ error: "Gruppe nicht gefunden" });
+
+    const members = JSON.parse(row.members);
+    if (!members.includes(name)) members.push(name);
+
+    db.run(
+      "UPDATE groups SET members = ? WHERE code = ?",
+      [JSON.stringify(members), code],
+      (err) => {
+        if (err) return res.status(500).json({ error: "Fehler beim Beitreten" });
+        res.json({
+          name: row.name,
+          subName: row.subName,
+          startMonth: row.startMonth,
+          startYear: row.startYear,
+          duration: row.duration,
+          groupCode: code,
+          members,
+          calendar: JSON.parse(row.calendar || "{}")
+        });
+      }
+    );
+  });
+});
+
+app.post("/update-calendar", (req, res) => {
+  const { code, userName, days, notes } = req.body;
+  if (!code || !userName) return res.status(400).json({ error: "Code und Benutzername erforderlich" });
+
+  db.get("SELECT * FROM groups WHERE code = ?", [code], (err, row) => {
+    if (err) return res.status(500).json({ error: "Datenbankfehler" });
+    if (!row) return res.status(404).json({ error: "Gruppe nicht gefunden" });
+
+    const calendar = JSON.parse(row.calendar || "{}");
+    calendar[userName] = { days: days || [], notes: notes || [] };
+
+    db.run(
+      "UPDATE groups SET calendar = ? WHERE code = ?",
+      [JSON.stringify(calendar), code],
+      (err) => {
+        if (err) {
+          console.error("Update error:", err.message);
+          return res.status(500).json({ error: "Fehler beim Aktualisieren", details: err.message });
+        }
+        res.json({ message: "Kalender aktualisiert", calendar });
+      }
+    );
+  });
+});
+
+app.get("/group/:code", (req, res) => {
+  const { code } = req.params;
+  db.get("SELECT * FROM groups WHERE code = ?", [code], (err, row) => {
+    if (err) return res.status(500).json({ error: "Datenbankfehler" });
+    if (!row) return res.status(404).json({ error: "Gruppe nicht gefunden" });
+
+    res.json({
+      name: row.name,
+      subName: row.subName,
+      startMonth: row.startMonth,
+      startYear: row.startYear,
+      duration: row.duration,
+      groupCode: code,
+      members: JSON.parse(row.members),
+      calendar: JSON.parse(row.calendar || "{}")
+    });
+  });
+});
+
+app.listen(port, () => {
+  console.log(`Server läuft auf http://localhost:${port}`);
+});
