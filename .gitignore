@@ -37,3 +37,4 @@ yarn-error.*
 
 app-example
 android/
+!android/app/src/main/res/raw/server_cert.pem
