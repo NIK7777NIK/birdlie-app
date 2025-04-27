@@ -28,7 +28,7 @@ export default function Home() {
   const [isYearPickerVisible, setYearPickerVisible] = useState(false);
   const [serverStatus, setServerStatus] = useState("Prüfe Server...");
 
-  const SERVER_URL = "https://45.81.233.129:3000";
+  const SERVER_URL = "https://birdlie.com:3000";
 
   const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
   const years = ["2025", "2026", "2027"];
