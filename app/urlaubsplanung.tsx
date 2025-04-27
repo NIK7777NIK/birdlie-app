@@ -6,7 +6,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 export default function Urlaubsplanung() {
   const { userName, subName, startMonth, startYear, duration, darkMode, groupCode, monthIndex, year } = useLocalSearchParams();
   const router = useRouter();
-  const SERVER_URL = "https://45.81.233.129:3000";
+  const SERVER_URL = "https://birdlie.com:3000";
   const months = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
   
   const startMonthIndex = months.indexOf(startMonth);

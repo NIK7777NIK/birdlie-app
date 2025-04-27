@@ -7,7 +7,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 export default function Auswertung() {
   const { startMonth, startYear, groupCode, darkMode, duration, monthIndex, year } = useLocalSearchParams();
   const router = useRouter();
-  const SERVER_URL = "https://45.81.233.129:3000";
+  const SERVER_URL = "https://birdlie.com:3000";
   const [isDarkMode, setIsDarkMode] = useState(darkMode === "true");
   const [groupData, setGroupData] = useState(null);
 

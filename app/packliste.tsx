@@ -6,7 +6,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 export default function Packliste() {
   const { userName, subName, startMonth, startYear, duration, darkMode, groupCode } = useLocalSearchParams();
   const router = useRouter();
-  const SERVER_URL = "https://45.81.233.129:3000";
+  const SERVER_URL = "https://birdlie.com:3000";
 
   const [isDarkMode, setIsDarkMode] = useState(darkMode === "true");
   const [items, setItems] = useState([]);
