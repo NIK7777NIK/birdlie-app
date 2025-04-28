@@ -5,11 +5,11 @@ import { MotiView } from "moti";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function Auswertung() {
-  const { startMonth, startYear, groupCode, darkMode, duration, monthIndex, year } = useLocalSearchParams();
-  const router = useRouter();
-  const SERVER_URL = "https://birdlie.com:3000";
-  const [isDarkMode, setIsDarkMode] = useState(darkMode === "true");
-  const [groupData, setGroupData] = useState(null);
+    const { userName, startMonth, startYear, groupCode, darkMode, duration, monthIndex, year } = useLocalSearchParams();
+    const router = useRouter();
+    const SERVER_URL = "https://birdlie.com:3000";
+    const [isDarkMode, setIsDarkMode] = useState(darkMode === "true");
+    const [groupData, setGroupData] = useState(null);
 
   const months = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
   const startMonthIndex = months.indexOf(startMonth);
@@ -110,7 +110,7 @@ export default function Auswertung() {
     router.push({
       pathname: "/kalender",
       params: { 
-        userName: groupData?.name || "Unbekannt", 
+        userName: userName || "Unbekannt", // Verwende den übergebenen userName
         subName: groupData?.subName || "Kein Untername", 
         startMonth, 
         startYear, 

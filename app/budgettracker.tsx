@@ -51,17 +51,50 @@ export default function BudgetTracker() {
       console.log("Abgerufene Budget-Daten:", data);
       if (response.ok) {
         const budgetData = data.budgetTracker || {};
-        if (budgetData.budget) {
-          setBudget(budgetData.budget.toString());
+        const userBudgetData = budgetData[userName] || { budget: 0, expenses: [] }; // Änderung hier
+        if (userBudgetData.budget) {
+          setBudget(userBudgetData.budget.toString());
           setBudgetSet(true);
         }
-        setExpenses(budgetData.expenses || []);
-        calculateTotalExpenses(budgetData.expenses || []);
+        setExpenses(userBudgetData.expenses || []);
+        calculateTotalExpenses(userBudgetData.expenses || []);
       } else {
         showModal("Fehler", data.error || "Konnte Budget-Daten nicht laden");
       }
     } catch (error) {
       console.error("Fehler beim Abrufen der Budget-Daten:", error);
+      showModal("Fehler", "Der Server ist nicht erreichbar. Bitte überprüfe deine Internetverbindung oder versuche es später erneut.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const saveBudgetData = async (updatedExpenses, updatedBudget = budget) => {
+    setIsLoading(true);
+    try {
+      console.log("Sende Anfrage an /update-budget-tracker:", { 
+        code: groupCode, 
+        userName, // Füge userName hinzu
+        budgetTracker: { budget: parseFloat(updatedBudget) || 0, expenses: updatedExpenses } 
+      });
+      const response = await fetch(`${SERVER_URL}/update-budget-tracker`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: groupCode,
+          userName, // Füge userName hinzu
+          budgetTracker: {
+            budget: parseFloat(updatedBudget) || 0,
+            expenses: updatedExpenses
+          }
+        })
+      });
+      const data = await response.json();
+      console.log("Server-Antwort (empfangen):", data);
+      if (!response.ok) {
+        showModal("Fehler", data.error || "Fehler beim Speichern des Budgets");
+      }
+    } catch (error) {
       showModal("Fehler", "Der Server ist nicht erreichbar. Bitte überprüfe deine Internetverbindung oder versuche es später erneut.");
     } finally {
       setIsLoading(false);
