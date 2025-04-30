@@ -5,40 +5,39 @@ import { MotiView } from "moti";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function Auswertung() {
-    const { userName, startMonth, startYear, groupCode, darkMode, duration, monthIndex, year } = useLocalSearchParams();
-    const router = useRouter();
-    const SERVER_URL = "https://birdlie.com:3000";
-    const [isDarkMode, setIsDarkMode] = useState(darkMode === "true");
-    const [groupData, setGroupData] = useState(null);
+  const { userName: paramUserName, startMonth, startYear, groupCode, darkMode, duration, monthIndex, year } = useLocalSearchParams();
+  const router = useRouter();
+  const SERVER_URL = "https://birdlie.com:3000";
+  const [userName, setUserName] = useState(paramUserName || "Unbekannt");
+  const [isDarkMode, setIsDarkMode] = useState(darkMode === "true");
+  const [groupData, setGroupData] = useState(null);
 
   const months = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
   const startMonthIndex = months.indexOf(startMonth);
 
   useEffect(() => {
-    const loadDarkMode = async () => {
+    const loadData = async () => {
       const storedMode = await AsyncStorage.getItem("darkMode");
       if (storedMode !== null) setIsDarkMode(JSON.parse(storedMode));
+      const storedUserName = await AsyncStorage.getItem("userName");
+      if (storedUserName && !paramUserName) setUserName(storedUserName);
+      fetchGroupData();
     };
-    loadDarkMode();
-    fetchGroupData();
-  }, []);
+    loadData();
+  }, [paramUserName]);
 
   const fetchGroupData = async () => {
     try {
       const response = await fetch(`${SERVER_URL}/group/${groupCode}`);
       const data = await response.json();
-      if (response.ok) {
-        setGroupData(data);
-      }
+      if (response.ok) setGroupData(data);
     } catch (error) {
       console.error("Fehler beim Laden der Gruppendaten:", error);
     }
   };
 
-  const getDaysInMonth = (monthIndex: number, year: number) => {
-    if (monthIndex === 1) {
-      return (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)) ? 29 : 28;
-    }
+  const getDaysInMonth = (monthIndex, year) => {
+    if (monthIndex === 1) return (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)) ? 29 : 28;
     return [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][monthIndex];
   };
 
@@ -102,7 +101,6 @@ export default function Auswertung() {
         stats: highlightedStats
       });
     }
-
     return statsByMonth;
   };
 
@@ -110,7 +108,7 @@ export default function Auswertung() {
     router.push({
       pathname: "/kalender",
       params: { 
-        userName: userName || "Unbekannt", // Verwende den übergebenen userName
+        userName, 
         subName: groupData?.subName || "Kein Untername", 
         startMonth, 
         startYear, 
