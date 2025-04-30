@@ -6,6 +6,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Clipboard from "expo-clipboard";
 import { Picker } from "@react-native-picker/picker";
 import BirdlieSplash from "../components/BirdlieSplash";
+import { Alert } from "react-native";
 
 export default function Home() {
   const router = useRouter();
@@ -29,7 +30,6 @@ export default function Home() {
   const [serverStatus, setServerStatus] = useState("Prüfe Server...");
 
   const SERVER_URL = "https://birdlie.com:3000";
-
   const monthNames = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
   const years = ["2025", "2026", "2027"];
 
@@ -40,20 +40,15 @@ export default function Home() {
     };
     loadDarkMode();
 
-    // Testanfrage an den Server
     const testServer = async () => {
       try {
-        console.log("Teste Server-Erreichbarkeit...");
         const response = await fetch(`${SERVER_URL}/group/test`, {
           method: "GET",
           headers: { "Content-Type": "application/json" }
         });
-        console.log("Test Response Status:", response.status);
         const data = await response.json();
-        console.log("Test Response Data:", data);
         setServerStatus("Server erreichbar!");
       } catch (error) {
-        console.log("Fehler beim Testen des Servers:", error.message);
         setServerStatus(`Server nicht erreichbar: ${error.message}`);
       }
     };
@@ -73,7 +68,6 @@ export default function Home() {
 
   const handleJoinGroup = () => {
     setShowChoice(false);
-    setShowCreateGroup(false);
     setShowJoinGroup(true);
   };
 
@@ -86,16 +80,15 @@ export default function Home() {
   const handleCreateSubmit = async () => {
     if (name.trim() && subName.trim()) {
       try {
-        console.log("Sende Anfrage an /create-group:", { name, subName, startMonth, startYear, duration });
         const response = await fetch(`${SERVER_URL}/create-group`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name, subName, startMonth, startYear, duration })
         });
-        console.log("Response Status:", response.status);
         const data = await response.json();
-        console.log("Response Data:", data);
         if (response.ok) {
+          await AsyncStorage.setItem("userName", name);
+          await AsyncStorage.setItem("groupCode", data.code);
           setGroupCode(data.code);
           setShowCreateGroup(false);
           setShowCodePopup(true);
@@ -103,22 +96,27 @@ export default function Home() {
           Alert.alert("Fehler", data.error || "Gruppe konnte nicht erstellt werden");
         }
       } catch (error) {
-        console.log("Fehler bei /create-group:", error.message);
         Alert.alert("Fehler", "Server nicht erreichbar: " + error.message);
       }
     } else {
-      console.log("Bedingung nicht erfüllt: name oder subName ist leer", { name, subName });
       Alert.alert("Fehler", "Bitte gib einen Namen und ein Reiseziel ein.");
     }
   };
 
   const handleCodeConfirm = async () => {
-    await AsyncStorage.setItem("groupCode", groupCode);
+    setShowCodePopup(false);
     router.push({
       pathname: "/kalender",
-      params: { userName: name, subName, startMonth, startYear, duration, darkMode: isDarkMode.toString(), groupCode }
+      params: { 
+        userName: name, 
+        subName, 
+        startMonth, 
+        startYear, 
+        duration, 
+        darkMode: isDarkMode.toString(), 
+        groupCode 
+      }
     });
-    setShowCodePopup(false);
   };
 
   const copyCodeToClipboard = async () => {
@@ -134,16 +132,14 @@ export default function Home() {
   const handleJoinSubmit = async () => {
     if (joinName.trim() && joinCode.trim()) {
       try {
-        console.log("Sende Anfrage an /join-group:", { name: joinName, code: joinCode });
         const response = await fetch(`${SERVER_URL}/join-group`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: joinName, code: joinCode })
         });
-        console.log("Response Status:", response.status);
         const data = await response.json();
-        console.log("Response Data:", data);
         if (response.ok) {
+          await AsyncStorage.setItem("userName", joinName);
           await AsyncStorage.setItem("groupCode", joinCode);
           router.push({
             pathname: "/kalender",
@@ -161,23 +157,19 @@ export default function Home() {
           Alert.alert("Fehler", data.error || "Ungültiger Code");
         }
       } catch (error) {
-        console.log("Fehler bei /join-group:", error.message);
         Alert.alert("Fehler", "Server nicht erreichbar: " + error.message);
       }
     } else {
-      console.log("Bedingung nicht erfüllt: joinName oder joinCode ist leer", { joinName, joinCode });
       Alert.alert("Fehler", "Bitte gib einen Namen und einen gültigen Code ein.");
     }
   };
 
   const showMonthPicker = () => {
-    console.log("Öffne Monatspicker");
     setMonthPickerVisible(true);
     setYearPickerVisible(false);
   };
 
   const showYearPicker = () => {
-    console.log("Öffne Jahrpicker");
     setYearPickerVisible(true);
     setMonthPickerVisible(false);
   };
@@ -194,22 +186,9 @@ export default function Home() {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: isDarkMode ? "#1A202C" : "#F0F4F8", padding: 20 }}>
         <View style={{ alignItems: "center", marginBottom: 40 }}>
-          <Image
-            source={require("../assets/birdlie-logo.png")}
-            style={{ width: 120, height: 120 }}
-            resizeMode="contain"
-          />
-          <MotiView
-            from={{ rotate: "0deg" }}
-            animate={{ rotate: ["0deg", "5deg", "-5deg", "0deg"] }}
-            transition={{ loop: true, duration: 1000 }}
-            style={{ position: "absolute", bottom: 35, right: 10 }}
-          >
-            <Image
-              source={require("../assets/birdlie-suitcase.png")}
-              style={{ width: 40, height: 40 }}
-              resizeMode="contain"
-            />
+          <Image source={require("../assets/birdlie-logo.png")} style={{ width: 120, height: 120 }} resizeMode="contain" />
+          <MotiView from={{ rotate: "0deg" }} animate={{ rotate: ["0deg", "5deg", "-5deg", "0deg"] }} transition={{ loop: true, duration: 1000 }} style={{ position: "absolute", bottom: 35, right: 10 }}>
+            <Image source={require("../assets/birdlie-suitcase.png")} style={{ width: 40, height: 40 }} resizeMode="contain" />
           </MotiView>
         </View>
         <Text style={{ fontSize: 28, fontWeight: "700", color: isDarkMode ? "#E2E8F0" : "#1F2937", marginBottom: 20, textAlign: "center" }}>
@@ -262,22 +241,9 @@ export default function Home() {
       <View style={{ flex: 1, backgroundColor: isDarkMode ? "#1A202C" : "#F0F4F8" }}>
         <ScrollView contentContainerStyle={{ justifyContent: "center", alignItems: "center", padding: 20, flexGrow: 1 }}>
           <View style={{ alignItems: "center", marginBottom: 20 }}>
-            <Image
-              source={require("../assets/birdlie-logo.png")}
-              style={{ width: 120, height: 120 }}
-              resizeMode="contain"
-            />
-            <MotiView
-              from={{ rotate: "0deg" }}
-              animate={{ rotate: ["0deg", "5deg", "-5deg", "0deg"] }}
-              transition={{ loop: true, duration: 1000 }}
-              style={{ position: "absolute", bottom: 35, right: 10 }}
-            >
-              <Image
-                source={require("../assets/birdlie-suitcase.png")}
-                style={{ width: 40, height: 40 }}
-                resizeMode="contain"
-              />
+            <Image source={require("../assets/birdlie-logo.png")} style={{ width: 120, height: 120 }} resizeMode="contain" />
+            <MotiView from={{ rotate: "0deg" }} animate={{ rotate: ["0deg", "5deg", "-5deg", "0deg"] }} transition={{ loop: true, duration: 1000 }} style={{ position: "absolute", bottom: 35, right: 10 }}>
+              <Image source={require("../assets/birdlie-suitcase.png")} style={{ width: 40, height: 40 }} resizeMode="contain" />
             </MotiView>
           </View>
           <Text style={{ fontSize: 24, fontWeight: "700", color: isDarkMode ? "#E2E8F0" : "#1F2937", marginBottom: 20 }}>
@@ -350,9 +316,7 @@ export default function Home() {
                 shadowRadius: 4,
               }}
             >
-              <Text style={{ fontSize: 16, color: isDarkMode ? "#E2E8F0" : "#374151" }}>
-                {startMonth}
-              </Text>
+              <Text style={{ fontSize: 16, color: isDarkMode ? "#E2E8F0" : "#374151" }}>{startMonth}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={showYearPicker}
@@ -371,9 +335,7 @@ export default function Home() {
                 shadowRadius: 4,
               }}
             >
-              <Text style={{ fontSize: 16, color: isDarkMode ? "#E2E8F0" : "#374151" }}>
-                {startYear}
-              </Text>
+              <Text style={{ fontSize: 16, color: isDarkMode ? "#E2E8F0" : "#374151" }}>{startYear}</Text>
             </TouchableOpacity>
           </View>
           {isMonthPickerVisible && (
@@ -390,13 +352,7 @@ export default function Home() {
               shadowRadius: 6,
               elevation: 3,
             }}>
-              <Text style={{
-                fontSize: 18,
-                fontWeight: "600",
-                color: isDarkMode ? "#E2E8F0" : "#1F2937",
-                marginBottom: 5,
-                textAlign: "center",
-              }}>
+              <Text style={{ fontSize: 18, fontWeight: "600", color: isDarkMode ? "#E2E8F0" : "#1F2937", marginBottom: 5, textAlign: "center" }}>
                 Monat auswählen
               </Text>
               <Picker
@@ -445,13 +401,7 @@ export default function Home() {
               shadowRadius: 6,
               elevation: 3,
             }}>
-              <Text style={{
-                fontSize: 18,
-                fontWeight: "600",
-                color: isDarkMode ? "#E2E8F0" : "#1F2937",
-                marginBottom: 5,
-                textAlign: "center",
-              }}>
+              <Text style={{ fontSize: 18, fontWeight: "600", color: isDarkMode ? "#E2E8F0" : "#1F2937", marginBottom: 5, textAlign: "center" }}>
                 Jahr auswählen
               </Text>
               <Picker
@@ -553,11 +503,7 @@ export default function Home() {
           </TouchableOpacity>
           <TouchableOpacity
             onPress={handleBackToChoice}
-            style={{
-              marginTop: 10,
-              paddingVertical: 8,
-              paddingHorizontal: 16,
-            }}
+            style={{ marginTop: 10, paddingVertical: 8, paddingHorizontal: 16 }}
           >
             <Text style={{ fontSize: 14, color: isDarkMode ? "#A0AEC0" : "#6B7280", textDecorationLine: "underline" }}>
               Zugangscode?
@@ -673,22 +619,9 @@ export default function Home() {
       <View style={{ flex: 1, backgroundColor: isDarkMode ? "#1A202C" : "#F0F4F8" }}>
         <ScrollView contentContainerStyle={{ justifyContent: "center", alignItems: "center", padding: 20, flexGrow: 1 }}>
           <View style={{ alignItems: "center", marginBottom: 20 }}>
-            <Image
-              source={require("../assets/birdlie-logo.png")}
-              style={{ width: 120, height: 120 }}
-              resizeMode="contain"
-            />
-            <MotiView
-              from={{ rotate: "0deg" }}
-              animate={{ rotate: ["0deg", "5deg", "-5deg", "0deg"] }}
-              transition={{ loop: true, duration: 1000 }}
-              style={{ position: "absolute", bottom: 35, right: 10 }}
-            >
-              <Image
-                source={require("../assets/birdlie-suitcase.png")}
-                style={{ width: 40, height: 40 }}
-                resizeMode="contain"
-              />
+            <Image source={require("../assets/birdlie-logo.png")} style={{ width: 120, height: 120 }} resizeMode="contain" />
+            <MotiView from={{ rotate: "0deg" }} animate={{ rotate: ["0deg", "5deg", "-5deg", "0deg"] }} transition={{ loop: true, duration: 1000 }} style={{ position: "absolute", bottom: 35, right: 10 }}>
+              <Image source={require("../assets/birdlie-suitcase.png")} style={{ width: 40, height: 40 }} resizeMode="contain" />
             </MotiView>
           </View>
           <Text style={{ fontSize: 24, fontWeight: "700", color: isDarkMode ? "#E2E8F0" : "#1F2937", marginBottom: 20 }}>
@@ -761,11 +694,7 @@ export default function Home() {
           </TouchableOpacity>
           <TouchableOpacity
             onPress={handleBackToChoice}
-            style={{
-              marginTop: 10,
-              paddingVertical: 8,
-              paddingHorizontal: 16,
-            }}
+            style={{ marginTop: 10, paddingVertical: 8, paddingHorizontal: 16 }}
           >
             <Text style={{ fontSize: 14, color: isDarkMode ? "#A0AEC0" : "#6B7280", textDecorationLine: "underline" }}>
               Gruppe erstellen?
